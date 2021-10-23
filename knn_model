@@ -1,0 +1,47 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+
+###importing and doing EDA of german bank credit file#
+data = pd.read_excel('/Users/michaelcolellajensen/Downloads/German Credit Data File.xlsx')
+print(data.shape)
+print(data.info())
+print(data.head(3))
+
+### set my respose and target variables#
+x=data[['CHK_ACCT', 'DURATION', 'HISTORY', 'AMOUNT', 'SAV_ACCT', 'EMPLOYMENT', 'INSTALL_RATE', 'PRESENT_RESIDENT']]
+y=data['Inverted Response (1=Bad)'].values
+
+### spllit training and test data#
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.2, random_state=123, stratify=y)
+knn = KNeighborsClassifier(n_neighbors=35)
+knn.fit(x_train, y_train)
+y_prediction = knn.predict(x_test)
+knn_score = knn.score(x_test, y_test)
+print(knn_score)
+
+print(confusion_matrix(y_test, y_prediction))
+print(classification_report(y_test, y_prediction))
+
+### final predictions on entire data set#
+knn_all = KNeighborsClassifier(n_neighbors=35)
+knn_all.fit(x, y)
+y_predictions_all = knn.predict(x)
+print(confusion_matrix(y, y_predictions_all))
+print(classification_report(y, y_predictions_all))
+
+#tune my KNN hyperparameter to find the best fit
+from sklearn.model_selection import GridSearchCV
+param_grid = {'n_neighbors': np.arange(1, 100)}
+knn_opt = KNeighborsClassifier()
+knn_cv = GridSearchCV(knn_opt, param_grid, cv=5)
+knn_cv.fit(x, y)
+knn_cv_opt = knn_cv.best_params_
+print(knn_cv_opt)
+knn_cv_best_score = knn_cv.best_score_
+print(knn_cv_best_score)
+###best fit is with knn=35#
