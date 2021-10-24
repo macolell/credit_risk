@@ -13,12 +13,12 @@ print(data.info())
 print(data.head(3))
 
 ### set my respose and target variables#
-x=data[['CHK_ACCT', 'DURATION', 'HISTORY', 'AMOUNT', 'SAV_ACCT', 'EMPLOYMENT', 'INSTALL_RATE', 'PRESENT_RESIDENT']]
-y=data['Inverted Response (1=Bad)'].values
+x=data[['CHK_ACCT', 'DURATION', 'HISTORY', 'SAV_ACCT', 'EMPLOYMENT', 'INSTALL_RATE', 'OTHER_INSTALL', 'NUM_CREDITS', 'OWN_RES']]
+y=data['RESPONSE (1=Good)'].values
 
 ### spllit training and test data#
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.2, random_state=123, stratify=y)
-knn = KNeighborsClassifier(n_neighbors=35)
+knn = KNeighborsClassifier(n_neighbors=7)
 knn.fit(x_train, y_train)
 y_prediction = knn.predict(x_test)
 knn_score = knn.score(x_test, y_test)
@@ -28,20 +28,41 @@ print(confusion_matrix(y_test, y_prediction))
 print(classification_report(y_test, y_prediction))
 
 ### final predictions on entire data set#
-knn_all = KNeighborsClassifier(n_neighbors=35)
+knn_all = KNeighborsClassifier(n_neighbors=7)
 knn_all.fit(x, y)
-y_predictions_all = knn.predict(x)
+y_predictions_all = knn_all.predict(x)
+knn_all_score = knn_all.score(x, y)
+print(knn_all_score)
 print(confusion_matrix(y, y_predictions_all))
 print(classification_report(y, y_predictions_all))
 
 #tune my KNN hyperparameter to find the best fit
 from sklearn.model_selection import GridSearchCV
-param_grid = {'n_neighbors': np.arange(1, 100)}
+param_grid = {'n_neighbors': np.arange(1, 25)}
 knn_opt = KNeighborsClassifier()
-knn_cv = GridSearchCV(knn_opt, param_grid, cv=5)
+knn_cv = GridSearchCV(knn_opt, param_grid, cv=15)
 knn_cv.fit(x, y)
 knn_cv_opt = knn_cv.best_params_
 print(knn_cv_opt)
 knn_cv_best_score = knn_cv.best_score_
 print(knn_cv_best_score)
-###best fit is with knn=35#
+
+###plotting possible k value#
+neighbors = np.arange(1,25)
+train_accuracy = np.empty(len(neighbors))
+test_accuracy = np.empty(len(neighbors))
+
+for n, k in enumerate(neighbors):
+	knn_best=KNeighborsClassifier(n_neighbors = k)
+	knn_best.fit(x_train, y_train)
+	train_accuracy[n] = knn_best.score(x_train, y_train)
+	test_accuracy[n] = knn_best.score(x_test, y_test)
+    
+plt.title('k-NN: Varying Number of Neighbors')
+plt.plot(neighbors, test_accuracy, label = 'Testing Accuracy')
+plt.plot(neighbors, train_accuracy, label = 'Training Accuracy')
+plt.legend()
+plt.xlabel('Number of Neighbors')
+plt.ylabel('Accuracy')
+plt.show()
+###the graph shows k=7 as a solid model without a risk of overfitting#
