@@ -5,12 +5,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
-
-###importing and doing EDA of german bank credit file#
-data = pd.read_excel('/Users/michaelcolellajensen/Downloads/German Credit Data File.xlsx')
-print(data.shape)
-print(data.info())
-print(data.head(3))
+from sklearn.metrics import roc_curve
 
 ### set my respose and target variables#
 x=data[['CHK_ACCT', 'DURATION', 'HISTORY', 'SAV_ACCT', 'EMPLOYMENT', 'INSTALL_RATE', 'OTHER_INSTALL', 'NUM_CREDITS', 'OWN_RES']]
@@ -23,11 +18,10 @@ knn.fit(x_train, y_train)
 y_prediction = knn.predict(x_test)
 knn_score = knn.score(x_test, y_test)
 print(knn_score)
-
 print(confusion_matrix(y_test, y_prediction))
 print(classification_report(y_test, y_prediction))
 
-### final predictions on entire data set#
+### Meteric using the entire data set#
 knn_all = KNeighborsClassifier(n_neighbors=7)
 knn_all.fit(x, y)
 y_predictions_all = knn_all.predict(x)
@@ -36,7 +30,6 @@ print(knn_all_score)
 print(confusion_matrix(y, y_predictions_all))
 print(classification_report(y, y_predictions_all))
 
-#tune my KNN hyperparameter to find the best fit
 from sklearn.model_selection import GridSearchCV
 param_grid = {'n_neighbors': np.arange(1, 25)}
 knn_opt = KNeighborsClassifier()
@@ -47,17 +40,19 @@ print(knn_cv_opt)
 knn_cv_best_score = knn_cv.best_score_
 print(knn_cv_best_score)
 
-###plotting possible k value#
+### creating a plot of the accuracy based on different k values
 neighbors = np.arange(1,25)
 train_accuracy = np.empty(len(neighbors))
 test_accuracy = np.empty(len(neighbors))
 
+### for loop to enumerate through the range set above# 
 for n, k in enumerate(neighbors):
 	knn_best=KNeighborsClassifier(n_neighbors = k)
 	knn_best.fit(x_train, y_train)
 	train_accuracy[n] = knn_best.score(x_train, y_train)
 	test_accuracy[n] = knn_best.score(x_test, y_test)
-    
+
+### plot the trend lines of accuracy#
 plt.title('k-NN: Varying Number of Neighbors')
 plt.plot(neighbors, test_accuracy, label = 'Testing Accuracy')
 plt.plot(neighbors, train_accuracy, label = 'Training Accuracy')
@@ -65,4 +60,77 @@ plt.legend()
 plt.xlabel('Number of Neighbors')
 plt.ylabel('Accuracy')
 plt.show()
-###the graph shows k=7 as a solid model without a risk of overfitting#
+### 7 is the lowest k value were testing and training accuracy start to converge#
+
+### Analysis based on Logistic Regression using the same features#
+from sklearn.linear_model import LogisticRegression
+log_reg = LogisticRegression()
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=123)
+log_reg.fit(x_train, y_train)
+y_log_predictions = log_reg.predict(x_test)
+
+### Check confusion matrix#
+conf_mtx = confusion_matrix(y_test, y_log_predictions)
+print(conf_mtx)
+log_reg_score = log_reg.score(x_test, y_test)
+print(log_reg_score)
+class_report = classification_report(y_test, y_log_predictions)
+print(class_report)
+
+###Calculate the ROC and AUC of the train model#
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import cross_val_score
+### calculating the predictions
+y_predictions_prob = log_reg.predict_proba(x_test)[:,1]
+### unpack the 3 variables returned by predict_proba#
+fpr, tpr, threshold = roc_curve(y_test, y_predictions_prob)
+
+auc = roc_auc_score(y_test, y_predictions_prob)
+print(auc)
+cv_scores = cross_val_score(log_reg, x, y, cv=5, scoring='roc_auc')
+print(np.mean(cv_scores))
+
+### plot the ROC curve of the training model#
+### the predict_proba method calculates the false and true positive rate at each threshold#
+### the predict_proba will return 3 variables false + rate, true + rate, and threshold#
+y_predict_prob = log_reg.predict_proba(x_test)[:,1]
+### unpack the 3 variables#
+fpr1, tpr1, threshold1 = roc_curve(y_test, y_predict_prob)
+
+### Plot the curve#
+plt.plot([0,1], [0,1])
+plt.plot(fpr1, tpr1, label = 'Logistic Regression')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('logistic Regression ROC curve')
+plt.show()
+
+### check against all data#
+log_reg_all = LogisticRegression()
+log_reg_all.fit(x, y)
+y_log_all_predictions = log_reg_all.predict(x)
+
+### Check my confusion matrix#
+conf_mtx = confusion_matrix(y, y_log_all_predictions)
+print(conf_mtx)
+log_reg_score = log_reg.score(x, y)
+print(log_reg_score)
+class_report = classification_report(y, y_log_all_predictions)
+print(class_report)
+
+### Plot the ROC curve#
+### the predict_proba method calculates the false and true positive rate at each threshold#
+### the predict_proba will return 3 variables false + rate, true + rate, and threshold#
+y_predictions_prob = log_reg_all.predict_proba(x)[:,1]
+### unpack the 3 variables#
+fpr, tpr, threshold = roc_curve(y, y_predictions_prob)
+### Plot the curve#
+plt.plot([0,1], [0,1])
+plt.plot(fpr, tpr, label = 'Logistic Regression')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('logistic Regression ROC curve')
+plt.show()
+
+auc = roc_auc_score(y, y_log_all_predictions)
+print(auc)
